@@ -10,6 +10,7 @@
 # Commands:
 #  hubot gin me - Time for gin?
 #  hubot gin all - Time for gin?
+#  too early for gin - Annother silly question
 #  gin time - Silly question
 #
 # Notes:
@@ -21,6 +22,9 @@
 module.exports = (robot) ->
   robot.hear /gin time/i, (res) ->
     res.reply "Yes, #{res.message.user.name} it's time for gin."
+
+  robot.hear /too early for gin?/i, (res) ->
+    res.reply "It's never too early for gin #{res.message.user.name}!"
 
   robot.respond /gin me/i, (res) ->
     res.reply "Hands #{res.message.user.name} a gin!"
