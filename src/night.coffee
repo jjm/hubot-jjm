@@ -22,18 +22,17 @@ module.exports = (robot) ->
     res.reply "Goodnight #{res.message.user.name}!"
 
   robot.respond /goodnight/i, (res) ->
-    POWER_OFF_USERS = [ 'jjm' ]
+    POWER_OFF_USERS = [ 'jjm', 'jon.middleton' ]
 
     @exec = require('child_process').exec
-    command = "sudo poweroff"
+    command = "echo poweroff"
 
     res.reply "Goodight #{res.message.user.name}!"
     if res.message.user.name in POWER_OFF_USERS
       res.reply "Now running *#{command}* "   
       @exec command, (error, stdout, stderr) ->
-        res.send error
-        res.send stdout
-        res.send stderr
+        if error then res.send "Encountered an error :( #{error}"
+        if stderr then res.send "STDERR: #{stderr}"
+        if stdout then res.send "STDOUT: #{stdout}"
     else 
       res.reply "Goodnight #{res.message.user.name}, but your not allowed to power me off :-P"
-
