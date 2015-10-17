@@ -8,8 +8,8 @@
 #  None
 #
 # Commands:
-#   hubot incident new   - Invloke a new incident
-#   hubot incident close - Close the inclident for the current channel
+#   ! incident new   - Invloke a incident (requires incident role in hubot-auth).
+#   ! incident close - Close the inclident (requires incident role in hubot-auth).
 #
 # Notes:
 #  None

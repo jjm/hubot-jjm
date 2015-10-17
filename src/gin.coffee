@@ -8,8 +8,8 @@
 #  None
 #
 # Commands:
-#  hubot gin me - Time for gin?
-#  hubot gin all - Time for gin?
+#  ! gin me - Time for gin?
+#  ! gin all - Time for gin?
 #  too early for gin - Annother silly question
 #  gin time - Silly question
 #
