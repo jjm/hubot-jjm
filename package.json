@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/jjm/hubot-jjm/issues"
   },
-  "homepage": "https://github.com/jjm/hubot-jjm"
+  "homepage": "https://github.com/jjm/hubot-jjm",
+  "dependencies": {
+    "hubot-auth": "1.2.0"
+  }
 }

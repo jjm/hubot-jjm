@@ -24,7 +24,7 @@ module.exports = (robot) ->
   robot.respond /goodnight/i, (res) ->
     @exec = require('child_process').exec
     command = "echo poweroff"
-    require_role = "poweroff"
+    required_role = "poweroff"
 
     if robot.auth.hasRole(res.envelope.user, required_role)
       res.reply "Goodight #{res.message.user.name}!"
