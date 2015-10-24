@@ -19,6 +19,33 @@
 # Author:
 #  jjm
 
+channel_setPurpose = (res, channel, purpose) ->
+  HubotAPIKey = process.env.HUBOT_SLACK_TOKEN
+  WebHookAPIKey = process.env.HUBOT_SLACK_WebAPI_TOKEN
+
+  url = "https://slack.com/api/channels.setPurpose?token=#{WebHookAPIKey}&channel=#{channel}&purpose='#{purpose}'"
+  #url = "https://slack.com/api/channels.setPurpose?token=#{HubotAPIKey}&channel=#{channel}&purpose='#{purpose}'"
+
+  res.robot.logger.warning "channel_setPurpose: Setting to '#{purpose}' for channel #{channel}"
+
+  res.http(url).get() (error, responce, body) ->
+      if error then res.send error
+
+      data = null
+      try
+        data = JSON.parse(body)
+      catch error
+        res.send "Ran into error parsing error :-("
+        return
+
+      if data.ok
+        res.robot.logger.warning "channel_setPurpose: success body '#{body}'"
+        res.send "Successuly set purpose"
+      else
+        res.robot.logger.warning "channel_setPurpose: failed body '#{body}'"
+        res.send "ERROR: Could not set purpose"
+        false
+
 channel_archive = (res, channel) ->
   HubotAPIKey = process.env.HUBOT_SLACK_TOKEN
   WebHookAPIKey = process.env.HUBOT_SLACK_WebAPI_TOKEN
@@ -68,15 +95,15 @@ module.exports = (robot) ->
         robot.logger.warning "IncidentDate is #{NewIncidentDate} == #{LastIncidentDate} - Incident ID: #{NewIncidentID}"
       else
         NewIncidentID = 1
-        robot.logger.warning "IncidentDate is #{NewIncidentDate} == #{LastIncidentDate} - Incident ID: #{NewIncidentID}"
+        robot.logger.warning "IncidentDate is #{NewIncidentDate} != #{LastIncidentDate} - Incident ID: #{NewIncidentID}"
         robot.brain.set 'LastIncidentDate', NewIncidentDate
+
+      FullIncidentID = "#{NewIncidentDate}_#{NewIncidentID}"
 
       robot.brain.set 'LastIncidentID', NewIncidentID
       robot.brain.set 'LastIncidentDate', NewIncidentDate
       robot.brain.set 'IncidentName', res.match[1]
       robot.brain.set 'IncidentID', FullIncidentID
-
-      FullIncidentID = "#{NewIncidentDate}_#{NewIncidentID}"
 
       HubotAPIKey = process.env.HUBOT_SLACK_TOKEN
       WebHookAPIKey = process.env.HUBOT_SLACK_WebAPI_TOKEN
@@ -105,6 +132,9 @@ module.exports = (robot) ->
            robot.logger.warning "Incident Channel ID from Brain is: #{robot.brain.get('IncidentChannelID')}"
 
            res.reply "Invoking <\##{robot.brain.get('IncidentChannelID')}> for *#{robot.brain.get('IncidentName')}*"
+
+           channel_setPurpose res, robot.brain.get('IncidentChannelID'), "Commincation channel for #{robot.brain.get('IncidentName')} Incident"
+
          else
            res.send "channel_create failed "
     else
