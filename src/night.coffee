@@ -5,7 +5,7 @@
 #  hubot-auth
 #
 # Configuration:
-#  None
+#  HUBOT_NIGHT_POWEROFF_COMMAND = command to run for powering off system.
 #
 # Commands:
 #  ! goodnight - time for bed (requires poweroff role in hubot-auth).
@@ -22,10 +22,11 @@ module.exports = (robot) ->
     res.reply "Goodnight #{res.message.user.name}!"
 
   robot.respond /goodnight/i, (res) ->
+    required_role = "poweroff"
+
     if robot.auth.hasRole(res.envelope.user, required_role)
       @exec = require('child_process').exec
-      command = "echo poweroff"
-      required_role = "poweroff"
+      command = process.env.HUBOT_NIGHT_POWEROFF_COMMAND
 
       res.reply "Goodight #{res.message.user.name}!"
       res.reply "Now running *#{command}* "   
