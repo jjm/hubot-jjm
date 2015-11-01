@@ -6,6 +6,7 @@
 #
 # Configuration:
 #  HUBOT_SLACK_WebAPI_TOKEN - An Slack API test key (it's a work in progress).
+#  HUBOT_SLACK_USERID       - The UserID of the Hubot intergration in Slack 
 #
 # Commands:
 #   ! incident new   - Invloke a incident (requires incident role in hubot-auth).
@@ -19,12 +20,16 @@
 # Author:
 #  jjm
 
-channel_setPurpose = (res, channel, purpose) ->
-  HubotAPIKey = process.env.HUBOT_SLACK_TOKEN
-  WebHookAPIKey = process.env.HUBOT_SLACK_WebAPI_TOKEN
+HubotSlackUserID = process.env.HUBOT_SLACK_USERID
+HubotAPIKey = process.env.HUBOT_SLACK_TOKEN
 
-  url = "https://slack.com/api/channels.setPurpose?token=#{WebHookAPIKey}&channel=#{channel}&purpose='#{purpose}'"
+channel_setPurpose = (res, channel, purpose) ->
+
   #url = "https://slack.com/api/channels.setPurpose?token=#{HubotAPIKey}&channel=#{channel}&purpose='#{purpose}'"
+
+  # About or this...
+  WebHookAPIKey = process.env.HUBOT_SLACK_WebAPI_TOKEN
+  url = "https://slack.com/api/channels.setPurpose?token=#{WebHookAPIKey}&channel=#{channel}&purpose='#{purpose}'"
 
   res.robot.logger.warning "channel_setPurpose: Setting to '#{purpose}' for channel #{channel}"
 
@@ -46,8 +51,35 @@ channel_setPurpose = (res, channel, purpose) ->
         res.send "ERROR: Could not set purpose"
         false
 
+channel_setTopic = (res, channel, topic) ->
+
+  #url = "https://slack.com/api/channels.setTopic?token=#{HubotAPIKey}&channel=#{channel}&topic='#{topic}'"
+
+  # About or this...
+  WebHookAPIKey = process.env.HUBOT_SLACK_WebAPI_TOKEN
+  url = "https://slack.com/api/channels.setTopic?token=#{WebHookAPIKey}&channel=#{channel}&topic='#{topic}'"
+
+  res.robot.logger.warning "channel_setTopic: Setting to '#{topic}' for channel #{channel}"
+
+  res.http(url).get() (error, responce, body) ->
+      if error then res.send error
+
+      data = null
+      try
+        data = JSON.parse(body)
+      catch error
+        res.send "Ran into error parsing error :-("
+        return
+
+      if data.ok
+        res.robot.logger.warning "channel_setTopic: success body '#{body}'"
+        res.send "Successuly set topic"
+      else
+        res.robot.logger.warning "channel_setTopic: failed body '#{body}'"
+        res.send "ERROR: Could not set topic"
+        false
+
 channel_archive = (res, channel) ->
-  HubotAPIKey = process.env.HUBOT_SLACK_TOKEN
   WebHookAPIKey = process.env.HUBOT_SLACK_WebAPI_TOKEN
 
   url = "https://slack.com/api/channels.archive?token=#{WebHookAPIKey}&channel=#{channel}"
@@ -69,6 +101,30 @@ channel_archive = (res, channel) ->
         return true
       else
         res.robot.logger.warning "Failed to archive channel #{channel} - #{body}"
+        return false
+
+channel_invite_user = (res, channelID, userID) =>
+  WebHookAPIKey = process.env.HUBOT_SLACK_WebAPI_TOKEN
+
+  url = "https://slack.com/api/channels.invite?token=#{WebHookAPIKey}&channel=#{channelID}&user=#{userID}"
+
+  res.robot.logger.warning "Joining #{userID} to channel #{channelID}"
+
+  res.http(url).get() (error, responce, body) =>
+      if error then res.send error
+
+      data = null
+      try
+        data = JSON.parse(body)
+      catch error
+        res.send "Ran into error parsing error :-("
+        return
+
+      if data.ok
+        res.robot.logger.warning "Successfully joined #{userID} to channel #{channelID} - #{body}"
+        return true
+      else
+        res.robot.logger.warning "Failed to join #{userID} to #{channelID} - #{body}"
         return false
 
 module.exports = (robot) ->
@@ -105,7 +161,6 @@ module.exports = (robot) ->
       robot.brain.set 'IncidentName', res.match[1]
       robot.brain.set 'IncidentID', FullIncidentID
 
-      HubotAPIKey = process.env.HUBOT_SLACK_TOKEN
       WebHookAPIKey = process.env.HUBOT_SLACK_WebAPI_TOKEN
       url = "https://slack.com/api/channels.create?token=#{WebHookAPIKey}&name=inc_#{FullIncidentID}"
 
@@ -121,20 +176,23 @@ module.exports = (robot) ->
          try
            data = JSON.parse(body)
          catch error
-           res.send "Ran into error parsing error :-("
+           res.send "Ran into an JSON parsing error :-("
 
          if data.ok
-           robot.logger.warning "channel_create - body #{body}"
-           robot.logger.warning "channel_create - id #{data.channel.id}"
+           if channel_invite_user(res, "#{data.channel.id}", "#{HubotSlackUserID}")
+             robot.brain.set 'IncidentChannelID', data.channel.id
 
-           robot.brain.set 'IncidentChannelID', data.channel.id
+             res.reply "Invoking <\##{robot.brain.get('IncidentChannelID')}> for *#{robot.brain.get('IncidentName')}*"
 
-           robot.logger.warning "Incident Channel ID from Brain is: #{robot.brain.get('IncidentChannelID')}"
+             robot.logger.warning "channel_create - body #{body}"
+             robot.logger.warning "channel_create - id #{data.channel.id}"
+             robot.logger.warning "Incident Channel ID from Brain is: #{robot.brain.get('IncidentChannelID')}"
 
-           res.reply "Invoking <\##{robot.brain.get('IncidentChannelID')}> for *#{robot.brain.get('IncidentName')}*"
+             channel_setTopic res, robot.brain.get('IncidentChannelID'), "Getting started, please update topic with progress."
+             channel_setPurpose res, robot.brain.get('IncidentChannelID'), "Commincation channel for #{robot.brain.get('IncidentName')} Incident"
 
-           channel_setPurpose res, robot.brain.get('IncidentChannelID'), "Commincation channel for #{robot.brain.get('IncidentName')} Incident"
-
+           else 
+             res.reply "Could not invite bot to channel"
          else
            res.send "channel_create failed "
     else
@@ -145,8 +203,12 @@ module.exports = (robot) ->
 
     if robot.auth.hasRole(res.envelope.user, required_role) 
       if robot.brain.get('IncidentID') != null
+        # Should leave channel first...
+
         if channel_archive res, "#{robot.brain.get('IncidentChannelID')}"
           res.reply "Closed <\##{robot.brain.get('IncidentChannelID')}> for *#{robot.brain.get('IncidentName')}*"
+
+
 
           robot.brain.set 'IncidentID', null
           robot.brain.set 'IncidentName', null
