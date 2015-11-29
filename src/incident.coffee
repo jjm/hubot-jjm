@@ -23,6 +23,33 @@
 HubotSlackUserID = process.env.HUBOT_SLACK_USERID
 HubotAPIKey = process.env.HUBOT_SLACK_TOKEN
 
+channel_getHistory = (res, channel) ->
+  url = "https://slack.com/api/channels.history?token=#{HubotAPIKey}&channel=#{channel}&pretty=1"
+
+  res.http(url).get() (error, responce, body) ->
+      if error then res.send error
+
+      data = null
+      try
+        data = JSON.parse(body)
+      catch error
+        res.send "Ran into error parsing error :-("
+        return
+
+      if data.ok
+        res.robot.logger.warning "channel_getHistroy: success body '#{body}'"
+        # should write this out somewhere to ....
+
+        if data.has_more
+         res.send "Successuly got backup - but there's more"
+         # should write this out somewhere....
+        else
+          res.send "Successuly got backup "
+      else
+        res.robot.logger.warning "channel_getHistory: failed body '#{body}'"
+        res.send "ERROR: Could not create backup!"
+        false
+
 channel_setPurpose = (res, channel, purpose) ->
 
   #url = "https://slack.com/api/channels.setPurpose?token=#{HubotAPIKey}&channel=#{channel}&purpose='#{purpose}'"
@@ -205,10 +232,10 @@ module.exports = (robot) ->
       if robot.brain.get('IncidentID') != null
         # Should leave channel first...
 
+        channel_getHistory res, "#{robot.brain.get('IncidentChannelID')}"
+
         if channel_archive res, "#{robot.brain.get('IncidentChannelID')}"
           res.reply "Closed <\##{robot.brain.get('IncidentChannelID')}> for *#{robot.brain.get('IncidentName')}*"
-
-
 
           robot.brain.set 'IncidentID', null
           robot.brain.set 'IncidentName', null
